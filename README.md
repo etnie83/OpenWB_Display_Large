@@ -22,3 +22,5 @@ Sketch assumes Display, wiring for Wemos D1 & compatible:
 
 # Configuration
 You need to enter SSID, PW and IP of openWB in .ino source file
+
+<img src="/images/display.jpg" style="display: inline-block; margin: 0 auto; height: 400px">
