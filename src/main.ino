@@ -15,6 +15,14 @@
 #define TFT_RST       D6 
 #define TFT_DC        D1
 
+// If you use the Openwb2.0 Software you need to uncomment this definition!!!
+#define OPENWB2
+#define JSON
+
+#ifdef JSON
+#include <ArduinoJson.h>
+#endif
+
 Adafruit_ST7735 display = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST);
 
 // Global constants for WiFi connections
@@ -28,14 +36,10 @@ const char* pass = "PASSWORD";        // your network password
 const char* hostname = "openWB-DisplayLarge";      
 
 // MQTT Setup
-IPAddress MQTT_Broker(192,168,0,105); // openWB IP address
+IPAddress MQTT_Broker(192,168,0,106); // openWB IP address
 const int MQTT_Broker_Port = 1883;
 bool initScreen = true;
-// MQTT topics and variables for retrieved values
-const char* MQTT_EVU_W = "openWB/evu/W";    // current power at EVU
-int EVU_W[] = {0, 0};
-int EVU_dir[] = {1, 1};
-int HB_dir = 1;
+// variables for retrieved values
 unsigned long previousMillisTimer = 0; 
 const long interval = 500; 
 bool NewData = false;
@@ -43,30 +47,48 @@ bool ErrorWasActive = false;
 int batteryRedPercent = 10;
 int batteryYellowPercent = 35;
 
+// Topics for subscribe
+// Topics for openwb1.x
+#ifndef OPENWB2
+const char* MQTT_EVU_W = "openWB/evu/W";    // current power at EVU
 const char* MQTT_PV_W = "openWB/pv/W";      // current PV power
-int PV_W[] = {0, 0};
-
 const char* MQTT_LP_all_W= "openWB/global/WAllChargePoints";  // current power draw for all charge points
-int LP_all_W[] = {0, 0};
-
 const char* MQTT_LP1_SOC= "openWB/lp/1/%Soc";  // current power draw for all charge points
-int LP1_SOC[] = {0, 0};
-
 const char* MQTT_LP1_PlugStat = "openWB/lp/1/boolPlugStat"; // is the car plugged in?
-bool LP1_PlugStat[] = {false, false};
-
 const char* MQTT_LP1_IsCharging = "openWB/lp/1/boolChargeStat"; // charging active?
-bool LP1_IsCharging = false;
-
 const char* MQTT_HB_W = "openWB/housebattery/W"; // HouseBattery Charge/Discharge
-int HB_W[] = {0, 0};
-
 const char* MQTT_HB_SOC = "openWB/housebattery/%Soc"; // HouseBattery Charge/Discharge
-int HB_SOC[] = {0, 0};
-
 const char* MQTT_HOUSE_W = "openWB/global/WHouseConsumption"; // House Load
-int HOUSE_W[] = {0, 0};
+const char* MQTT_HEATING_W = "openWB/SmartHome/Devices/1/Watt"; // Heating Power
+#else
+// Topics for openwb2.0 *** Not at the moment implemented
+const char* MQTT_EVU_W =      "openWB/evu/W";                     // current power at EVU ***
+const char* MQTT_PV_W =       "openWB/pv/get/power";              // current PV power
+const char* MQTT_LP_all_W=    "openWB/chargepoint/get/power";     // current power draw for all charge points
+const char* MQTT_LP1_SOC=     "openWB/vehicle/0/get/soc";         // current power draw for all charge points
+const char* MQTT_LP1_PlugStat = "openWB/lp/6/boolPlugStat";       // is the car plugged in?
+const char* MQTT_LP1_IsCharging = "openWB/lp/6/boolChargeStat";   // charging active?
+const char* MQTT_HB_W =       "openWB/bat/get/power";             // HouseBattery Charge/Discharge
+const char* MQTT_HB_SOC =     "openWB/bat/get/soc";               // HouseBattery Charge/Discharge
+const char* MQTT_HOUSE_W =    "openWB/global/WHouseConsumption";  // House Load ***
+const char* MQTT_HEATING_W =  "openWB/SmartHome/Devices/1/Watt";  // Heating Power ***
+const char* MQTT_SYSTEM_JSON = "openWB/system/lastlivevaluesJson"; // Last Live Value in JSON-Format
+#endif
 
+// init the Topicvalues
+int EVU_W[] = {0, 0};
+int EVU_dir[] = {1, 1};
+int HB_dir = 1;
+int PV_W[] = {0, 0};
+int LP_all_W[] = {0, 0};
+int LP1_SOC[] = {0, 0};
+bool LP1_PlugStat[] = {false, false};
+bool LP1_IsCharging = false;
+int HB_W[] = {0, 0};
+int HB_SOC[] = {0, 0};
+int HOUSE_W[] = {0, 0};
+int HEATING_W[] = {0, 0};
+String SYSTEM_JSON = "";
 
 // Display Setup
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
@@ -74,6 +96,8 @@ int HOUSE_W[] = {0, 0};
 
 #define shift_k_value  3
 #define shift_dot  1
+
+//https://www.riyas.org/2013/12/online-led-matrix-font-generator-with.html
 
 const uint8_t blitz[10] = { 0x3c, 0x78, 0x70, 0xe0,
                             0xfc, 0x38, 0x30, 0x60,
@@ -116,6 +140,10 @@ const uint8_t plugged[30] = { 0x00, 0x07, 0xf0,
                               0xf2, 0x4f, 0xf8,
                               0xf3, 0xcf, 0xf8,
                               0xf0, 0x0c, 0x18 };
+
+const uint8_t heating[10] = { 0x00,0x66,0x33,0x66,
+                              0xcc,0x66,0x33,0x66,
+                              0xcc,0x00};
 
 // Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
 #define OLED_RESET     0 // Reset pin # (or -1 if sharing Arduino reset pin)
@@ -162,15 +190,20 @@ boolean MQTTReconnect()
     {
         WriteLog("MQTT subscription failed");
     }
-    
+    #ifndef JSON
     r = MQTTClient.subscribe(MQTT_LP_all_W);
     r = MQTTClient.subscribe(MQTT_PV_W);
     r = MQTTClient.subscribe(MQTT_LP1_SOC);
+    r = MQTTClient.subscribe(MQTT_HB_W);
+    r = MQTTClient.subscribe(MQTT_HOUSE_W);
+    #endif
+    r = MQTTClient.subscribe(MQTT_HB_SOC);
+    r = MQTTClient.subscribe(MQTT_HEATING_W);
     r = MQTTClient.subscribe(MQTT_LP1_IsCharging);
     r = MQTTClient.subscribe(MQTT_LP1_PlugStat);
-    r = MQTTClient.subscribe(MQTT_HB_W);
-    r = MQTTClient.subscribe(MQTT_HB_SOC);
-    r = MQTTClient.subscribe(MQTT_HOUSE_W);
+    #ifdef JSON
+    r = MQTTClient.subscribe(MQTT_SYSTEM_JSON);
+    #endif
   }
   return MQTTClient.connected();
 }
@@ -210,27 +243,78 @@ void MQTTCallback(char* topic, byte* payload, unsigned int length)
   
   // store values in variables
   // todo use MQTT_ constants instead of hard coded values to compare
-  if (strcmp(topic,"openWB/evu/W")==0){ EVU_W[0] = (msg.toInt()); EVU_dir[0] = 1;
+  #ifndef JSON
+  if (strcmp(topic,MQTT_EVU_W)==0){ EVU_W[0] = (msg.toInt()); EVU_dir[0] = 1;
                                         if (EVU_W[0] < 0)
                                         {
                                            EVU_W[0] = EVU_W[0]*(-1);
                                            EVU_dir[0] = -1;
                                         }
                                       }
-  if (strcmp(topic,"openWB/pv/W")==0){PV_W[0] = (msg.toInt()*-1);}
-  if (strcmp(topic,"openWB/global/WAllChargePoints")==0){LP_all_W[0] = msg.toInt();}
-  if (strcmp(topic,"openWB/lp/1/%Soc")==0){LP1_SOC[0] = msg.toInt();}
-  if (strcmp(topic,"openWB/lp/1/boolChargeStat")==0){LP1_IsCharging = msg.toInt();}
-  if (strcmp(topic,"openWB/lp/1/boolPlugStat")==0){LP1_PlugStat[0] = msg.toInt();}
-  if (strcmp(topic,"openWB/housebattery/W")==0){ HB_W[0] = (msg.toInt()); HB_dir = 1;
+  if (strcmp(topic,MQTT_HOUSE_W)==0){HOUSE_W[0] = msg.toInt();}
+  if (strcmp(topic,MQTT_LP_all_W)==0){LP_all_W[0] = msg.toInt();}
+  if (strcmp(topic,MQTT_PV_W)==0){PV_W[0] = (msg.toInt()*-1);}
+  if (strcmp(topic,MQTT_LP1_SOC)==0){LP1_SOC[0] = msg.toInt();}
+  if (strcmp(topic,MQTT_HB_W)==0){ HB_W[0] = (msg.toInt()); HB_dir = 1;
                                         if (HB_W[0] < 0)
                                         {
                                            HB_W[0] = HB_W[0]*(-1);
                                            HB_dir = -1;
                                         }}
-  if (strcmp(topic,"openWB/housebattery/%Soc")==0){HB_SOC[0] = msg.toInt();}
-  if (strcmp(topic,"openWB/global/WHouseConsumption")==0){HOUSE_W[0] = msg.toInt();}
+  if (strcmp(topic,MQTT_HB_SOC)==0){HB_SOC[0] = msg.toInt();}
+  #endif
   
+  if (strcmp(topic,MQTT_HB_SOC)==0){HB_SOC[0] = msg.toInt();}
+  
+  if (strcmp(topic,MQTT_LP1_IsCharging)==0){LP1_IsCharging = msg.toInt();}
+  
+  if (strcmp(topic,MQTT_LP1_PlugStat)==0){LP1_PlugStat[0] = msg.toInt();}
+  //  String test = String(LP1_PlugStat[0]);
+  //  WriteLog(msg);
+  if (strcmp(topic,MQTT_HEATING_W)==0){HEATING_W[0] = msg.toInt();}
+  
+  #ifdef JSON // Values over JSON
+  if (strcmp(topic,MQTT_SYSTEM_JSON)==0)
+    {
+      SYSTEM_JSON = msg;
+      StaticJsonDocument <256> doc;
+      deserializeJson(doc,SYSTEM_JSON);
+
+      // EVU POWER IN W
+      float grid_json = doc["grid"];
+      EVU_W[0] = grid_json * 1000;
+      EVU_dir[0] = 1;
+      if (EVU_W[0] < 0)
+        {
+            EVU_W[0] = EVU_W[0]*(-1);
+            EVU_dir[0] = -1;
+        }
+      // HOUSE POWER IN W
+      float house_json = doc["house-power"];
+      HOUSE_W[0] = house_json * 1000;
+      // CHARGING ALL
+      float lp_json = doc["charging-all"];
+      LP_all_W[0] = lp_json * 1000;
+      // PV ALL
+      float pv_json = doc["pv-all"];
+      PV_W[0] = pv_json * 1000;
+      // EV SOC
+      int ev_soc_json = doc["ev0-soc"];
+      LP1_SOC[0] = ev_soc_json;
+      // HOUSE BATTERY SOC            ** DIDNT WORK AT THE MOMENT OVER JSON
+      //int hb_soc_json = doc["bat-all-soc"];
+      //HB_SOC[0] = int(hb_soc_json);
+      //Serial.println(hb_soc_json);
+      // HOUSE BATTERY
+      float hb_json = doc["bat-all-power"];
+      HB_W[0] = hb_json * 1000;
+      if (HB_W[0] < 0)
+        {
+            HB_W[0] = HB_W[0]*(-1);
+            HB_dir = -1;
+        }
+    }
+  #endif
   // processed incoming message, lets update the display
   //UpdateDisplay();
   NewData = true;
@@ -417,11 +501,11 @@ void UpdateDisplay()
     {
       display.setTextSize(2);
       WriteWattValue(EVU_W[1], SCREEN_WIDTH/2-shift_k_value-shift_dot, 10, ST77XX_BLACK);
-      if (EVU_dir >= 0)
+      if (EVU_dir[0] >= 0)
       {
       WriteWattValue(EVU_W[0], SCREEN_WIDTH/2-shift_k_value-shift_dot, 10, ST77XX_RED);
       }
-      else if (EVU_dir < 0)
+      else if (EVU_dir[0] < 0)
       {
       WriteWattValue(EVU_W[0], SCREEN_WIDTH/2-shift_k_value-shift_dot, 10, ST77XX_GREEN);
       }
@@ -689,12 +773,25 @@ void UpdateDisplay()
     else
         display.drawBitmap(SCREEN_WIDTH/2-20+10+32, 37, battery, 8, 10, ST77XX_GREEN);
   }  
+ 
+  // Draw Heating if active
+  if(HEATING_W[0]>=10 && ((HEATING_W[0] != HEATING_W[1]) || initScreen))
+  {
+    display.drawBitmap(SCREEN_WIDTH/2-20+10+32+10, 37, heating, 8, 10, ST77XX_WHITE);
+    HEATING_W[1] = HEATING_W[0];
+  }
+  else if (HEATING_W[0]<10 && (HEATING_W[0] != HEATING_W[1]))
+  {
+    display.drawBitmap(SCREEN_WIDTH/2-20+10+32+10, 37, heating, 8, 10, ST77XX_BLACK);
+    HEATING_W[1] = HEATING_W[0];
+  }
 
   // CHARGE STATE
   //
   // drawing the status of the charging station PLUGGED - UNPLUGGED - CHARGING (charging is also plugged!)
   if(LP1_PlugStat[0]==true && ((LP1_PlugStat[0] != LP1_PlugStat[1]) || initScreen))
   {
+    WriteLog("Plugged IN");
     // charging, drawing plugged car only - IMPORTANT BUG POSSIBLE POWER SYMBOL COULD STAY, MIGHT NEED ST77XX_BLACK SQUARE DRAWING
     display.drawBitmap(SCREEN_WIDTH/2-14, SCREEN_HEIGHT/3*2+5, unplugged, 20, 10, ST77XX_BLACK);
     display.drawBitmap(SCREEN_WIDTH/2-14, SCREEN_HEIGHT/3*2+5, plugged, 24, 10, ST77XX_WHITE);
