@@ -485,22 +485,23 @@ void UpdateDisplay()
     HOUSE_W[1] = HOUSE_W[0];
   }
 
-  // Write HeatingPower under the symbole
+  // Write HeatingPower and display the symbol
   if (HEATING_W[0] != HEATING_W[1] || initScreen )
   {
     WriteWattValue(HEATING_W[1], SCREEN_WIDTH-shift_k_value-shift_dot, 50, ST77XX_BLACK, 1);
     if (HEATING_W[0] > 10)
     {
     WriteWattValue(HEATING_W[0], SCREEN_WIDTH-shift_k_value-shift_dot, 50, ST77XX_WHITE, 1);
+    display.drawBitmap(SCREEN_WIDTH/2+44, 37, heating, 8, 10, ST77XX_RED);
     HEATING_W[1] = HEATING_W[0];
     }
     else
     {
     WriteWattValue(HEATING_W[0], SCREEN_WIDTH-shift_k_value-shift_dot, 50, ST77XX_BLACK, 1);
+    display.drawBitmap(SCREEN_WIDTH/2+44, 37, heating, 8, 10, ST77XX_BLACK);
     HEATING_W[1] = HEATING_W[0];
     }
   }
-  
 
   // check if EVU power is smaller than 1 kW
   if (EVU_W[0] < 1000 && (EVU_W[0] != EVU_W[1] || initScreen ))
@@ -750,13 +751,13 @@ void UpdateDisplay()
   }
 
   // Drawing the sun
-  if ((PV_W[0] >= 0 && (PV_W[0] != PV_W[1])) || initScreen)
+  if ((PV_W[0] <= 10 && (PV_W[0] != PV_W[1])) || initScreen)
   { 
-    display.drawBitmap(SCREEN_WIDTH/2+3, 30, sun, 16, 10, ST77XX_YELLOW);
-  }
-  else if (PV_W[0] <= 0 && (PV_W[0] != PV_W[1]))
-  {
     display.drawBitmap(SCREEN_WIDTH/2+3, 30, sun, 16, 10, ST77XX_BLACK);
+  }
+  else if (PV_W[0] > 10 && (PV_W[0] != PV_W[1]))
+  {
+    display.drawBitmap(SCREEN_WIDTH/2+3, 30, sun, 16, 10, ST77XX_YELLOW);
   }
 
   // drawing the arrow (from or to house)
@@ -809,18 +810,6 @@ void UpdateDisplay()
       }
     else
         display.drawBitmap(SCREEN_WIDTH/2-20+10+32, 37, battery, 8, 10, ST77XX_GREEN);
-  }  
- 
-  // Draw Heating if active
-  if((HEATING_W[0]>=10 && (HEATING_W[0] != HEATING_W[1])) || initScreen)
-  {
-    display.drawBitmap(SCREEN_WIDTH/2+44, 37, heating, 8, 10, ST77XX_RED);
-    HEATING_W[1] = HEATING_W[0];
-  }
-  else if (HEATING_W[0]<10 && (HEATING_W[0] != HEATING_W[1]))
-  {
-    display.drawBitmap(SCREEN_WIDTH/2+44, 37, heating, 8, 10, ST77XX_BLACK);
-    HEATING_W[1] = HEATING_W[0];
   }
 
   // CHARGE STATE
