@@ -16,8 +16,8 @@
 #define TFT_DC        D1
 
 // If you use the Openwb2.0 Software you need to uncomment this definition!!!
-#define OPENWB2
-#define JSON
+//#define OPENWB2
+//#define JSON
 
 #ifdef JSON
 #include <ArduinoJson.h>
@@ -33,10 +33,10 @@ Adafruit_ST7735 display = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST);
 // Network setup
 const char* ssid = "SSID";              // your network SSID (name)
 const char* pass = "PASSWORD";        // your network password
-const char* hostname = "openWB-DisplayLarge";      
+const char* hostname = "openWB-DisplayLarge";
 
 // MQTT Setup
-IPAddress MQTT_Broker(192,168,0,106); // openWB IP address
+IPAddress MQTT_Broker(192,168,0,105); // openWB IP address
 const int MQTT_Broker_Port = 1883;
 bool initScreen = true;
 // variables for retrieved values
@@ -141,9 +141,18 @@ const uint8_t plugged[30] = { 0x00, 0x07, 0xf0,
                               0xf3, 0xcf, 0xf8,
                               0xf0, 0x0c, 0x18 };
 
-const uint8_t heating[10] = { 0x00,0x66,0x33,0x66,
-                              0xcc,0x66,0x33,0x66,
-                              0xcc,0x00};
+const uint8_t heating[10] = { 0x48, 0x24, 0x24,
+                              0x48, 0x90, 0x90,
+                              0x48, 0x24, 0x24,
+                              0x48};
+
+const uint8_t sun[21] = { 0x00,0x70, 0x00,
+                          0xf8, 0x00, 0xf8,
+                          0x04, 0xf8, 0x08,
+                          0x70, 0x12, 0x00,
+                          0x04, 0x80, 0x09,
+                          0x00, 0x02, 0x00,
+                          0x00, 0x00};
 
 // Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
 #define OLED_RESET     0 // Reset pin # (or -1 if sharing Arduino reset pin)
@@ -468,12 +477,30 @@ void UpdateDisplay()
 
   display.setTextSize(1);
 
+  // Write HousePower under the symbole
   if (HOUSE_W[0] != HOUSE_W[1] || initScreen )
   {
     WriteWattValue(HOUSE_W[1], SCREEN_WIDTH/3*2-shift_k_value-shift_dot, 50, ST77XX_BLACK, 1);
     WriteWattValue(HOUSE_W[0], SCREEN_WIDTH/3*2-shift_k_value-shift_dot, 50, ST77XX_WHITE, 1);
     HOUSE_W[1] = HOUSE_W[0];
   }
+
+  // Write HeatingPower under the symbole
+  if (HEATING_W[0] != HEATING_W[1] || initScreen )
+  {
+    WriteWattValue(HEATING_W[1], SCREEN_WIDTH-shift_k_value-shift_dot, 50, ST77XX_BLACK, 1);
+    if (HEATING_W[0] > 10)
+    {
+    WriteWattValue(HEATING_W[0], SCREEN_WIDTH-shift_k_value-shift_dot, 50, ST77XX_WHITE, 1);
+    HEATING_W[1] = HEATING_W[0];
+    }
+    else
+    {
+    WriteWattValue(HEATING_W[0], SCREEN_WIDTH-shift_k_value-shift_dot, 50, ST77XX_BLACK, 1);
+    HEATING_W[1] = HEATING_W[0];
+    }
+  }
+  
 
   // check if EVU power is smaller than 1 kW
   if (EVU_W[0] < 1000 && (EVU_W[0] != EVU_W[1] || initScreen ))
@@ -541,6 +568,7 @@ void UpdateDisplay()
       WriteWattValue(PV_W[0], SCREEN_WIDTH, 10, ST77XX_WHITE);
       PV_W[1] = PV_W[0];
     }
+
 
   // Show HouseBattery
   display.setTextSize(1);
@@ -714,12 +742,21 @@ void UpdateDisplay()
 
   // drawing if energy is imported or exported
   if (initScreen)
-   { 
+  { 
     // drawing the Power Symbol
     display.drawBitmap(SCREEN_WIDTH/2-20-2, 37, blitz, 8, 10, ST77XX_YELLOW);
     // drawing the house
     display.drawBitmap(SCREEN_WIDTH/2-20+10+8, 37, haus2, 16, 10, ST77XX_WHITE);
-  
+  }
+
+  // Drawing the sun
+  if ((PV_W[0] >= 0 && (PV_W[0] != PV_W[1])) || initScreen)
+  { 
+    display.drawBitmap(SCREEN_WIDTH/2+3, 30, sun, 16, 10, ST77XX_YELLOW);
+  }
+  else if (PV_W[0] <= 0 && (PV_W[0] != PV_W[1]))
+  {
+    display.drawBitmap(SCREEN_WIDTH/2+3, 30, sun, 16, 10, ST77XX_BLACK);
   }
 
   // drawing the arrow (from or to house)
@@ -775,14 +812,14 @@ void UpdateDisplay()
   }  
  
   // Draw Heating if active
-  if(HEATING_W[0]>=10 && ((HEATING_W[0] != HEATING_W[1]) || initScreen))
+  if((HEATING_W[0]>=10 && (HEATING_W[0] != HEATING_W[1])) || initScreen)
   {
-    display.drawBitmap(SCREEN_WIDTH/2-20+10+32+10, 37, heating, 8, 10, ST77XX_WHITE);
+    display.drawBitmap(SCREEN_WIDTH/2+44, 37, heating, 8, 10, ST77XX_RED);
     HEATING_W[1] = HEATING_W[0];
   }
   else if (HEATING_W[0]<10 && (HEATING_W[0] != HEATING_W[1]))
   {
-    display.drawBitmap(SCREEN_WIDTH/2-20+10+32+10, 37, heating, 8, 10, ST77XX_BLACK);
+    display.drawBitmap(SCREEN_WIDTH/2+44, 37, heating, 8, 10, ST77XX_BLACK);
     HEATING_W[1] = HEATING_W[0];
   }
 
