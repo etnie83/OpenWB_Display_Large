@@ -17,8 +17,8 @@
 #define TFT_DC        D1
 
 // If you use the Openwb2.0 Software you need to uncomment this definition!!!
-//#define OPENWB2
-//#define JSON
+#define OPENWB2
+#define JSON
 
 #ifdef JSON
 #include <ArduinoJson.h>
@@ -62,18 +62,18 @@ const char* MQTT_HB_SOC = "openWB/housebattery/%Soc"; // HouseBattery Charge/Dis
 const char* MQTT_HOUSE_W = "openWB/global/WHouseConsumption"; // House Load
 const char* MQTT_HEATING_W = "openWB/SmartHome/Devices/1/Watt"; // Heating Power
 #else
-// Topics for openwb2.0 *** Not at the moment implemented
-const char* MQTT_EVU_W =      "openWB/evu/W";                     // current power at EVU ***
-const char* MQTT_PV_W =       "openWB/pv/get/power";              // current PV power
-const char* MQTT_LP_all_W=    "openWB/chargepoint/get/power";     // current power draw for all charge points
-const char* MQTT_LP1_SOC=     "openWB/vehicle/0/get/soc";         // current power draw for all charge points
-const char* MQTT_LP1_PlugStat = "openWB/lp/6/boolPlugStat";       // is the car plugged in?
-const char* MQTT_LP1_IsCharging = "openWB/lp/6/boolChargeStat";   // charging active?
-const char* MQTT_HB_W =       "openWB/bat/get/power";             // HouseBattery Charge/Discharge
-const char* MQTT_HB_SOC =     "openWB/bat/get/soc";               // HouseBattery Charge/Discharge
-const char* MQTT_HOUSE_W =    "openWB/global/WHouseConsumption";  // House Load ***
-const char* MQTT_HEATING_W =  "openWB/SmartHome/Devices/1/Watt";  // Heating Power ***
-const char* MQTT_SYSTEM_JSON = "openWB/system/lastlivevaluesJson"; // Last Live Value in JSON-Format
+// Topics for openwb2.0 *** Not at the moment implemented // ** need to be checked if its the correct number
+const char* MQTT_EVU_W =          "openWB/counter/0/get/power";             // current power at EVU                       **
+const char* MQTT_PV_W =           "openWB/pv/get/power";                    // current PV power
+const char* MQTT_LP_all_W=        "openWB/chargepoint/get/power";           // current power draw for all charge points
+const char* MQTT_LP1_SOC=         "openWB/vehicle/0/get/soc";               // current power draw for all charge points   **
+const char* MQTT_LP1_PlugStat =   "openWB/chargepoint/5/get/plug_state";    // is the car plugged in?                     **
+const char* MQTT_LP1_IsCharging = "openWB/chargepoint/5/get/charge_state";  // charging active?                           **
+const char* MQTT_HB_W =           "openWB/bat/get/power";                   // HouseBattery Charge/Discharge
+const char* MQTT_HB_SOC =         "openWB/bat/get/soc";                     // HouseBattery Charge/Discharge
+const char* MQTT_HOUSE_W =        "openWB/global/WHouseConsumption";        // House Load ***
+const char* MQTT_HEATING_W =      "openWB/LegacySmartHome/Devices/1/Watt";  // Heating Power
+const char* MQTT_SYSTEM_JSON =    "openWB/system/lastlivevaluesJson";       // Last Live Value in JSON-Format
 #endif
 
 // init the Topicvalues
