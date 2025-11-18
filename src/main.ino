@@ -17,8 +17,8 @@
 #define TFT_DC        D1
 
 // If you use the Openwb2.0 Software you need to uncomment this definition!!!
-#define OPENWB2
-#define JSON
+//#define OPENWB2
+//#define JSON
 
 #ifdef JSON
 #include <ArduinoJson.h>
@@ -32,12 +32,14 @@ Adafruit_ST7735 display = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST);
 // ***********************************
 
 // Network setup
-const char* ssid = "SSID";              // your network SSID (name)
-const char* pass = "PASSWORD";        // your network password
-const char* hostname = "openWB-DisplayLarge";
+const char* ssid = "LiehgenLAN";              // your network SSID (name)
+const char* pass = "26519452651945";        // your network password
+const char* hostname = "openWB-DisplayLarge";   // "openWB-DisplayLargeTest" oder "openWB-DisplayLarge"
+const char* user = "mqtt_smart";
+const char* password = "mqtt_smart_password321";
 
 // MQTT Setup
-IPAddress MQTT_Broker(192,168,0,105); // openWB IP address
+IPAddress MQTT_Broker(192,168,0,60); // openWB IP address
 const int MQTT_Broker_Port = 1883;
 bool initScreen = true;
 // variables for retrieved values
@@ -50,31 +52,37 @@ int batteryYellowPercent = 35;
 
 // Topics for subscribe
 // Topics for openwb1.x
-#ifndef OPENWB2
-const char* MQTT_EVU_W = "openWB/evu/W";    // current power at EVU
-const char* MQTT_PV_W = "openWB/pv/W";      // current PV power
-const char* MQTT_LP_all_W= "openWB/global/WAllChargePoints";  // current power draw for all charge points
-const char* MQTT_LP1_SOC= "openWB/lp/1/%Soc";  // current power draw for all charge points
-const char* MQTT_LP1_PlugStat = "openWB/lp/1/boolPlugStat"; // is the car plugged in?
-const char* MQTT_LP1_IsCharging = "openWB/lp/1/boolChargeStat"; // charging active?
-const char* MQTT_HB_W = "openWB/housebattery/W"; // HouseBattery Charge/Discharge
-const char* MQTT_HB_SOC = "openWB/housebattery/%Soc"; // HouseBattery Charge/Discharge
-const char* MQTT_HOUSE_W = "openWB/global/WHouseConsumption"; // House Load
-const char* MQTT_HEATING_W = "openWB/SmartHome/Devices/1/Watt"; // Heating Power
-#else
+//#ifndef OPENWB2
+const char* MQTT_EVU_W = "solar/power/inout";    // current power at EVU
+const char* MQTT_PV_W = "evcc/site/pvPower";      // current PV power
+const char* MQTT_LP_all_W= "evcc/loadpoints/1/chargePower";  // current power draw for all charge points
+const char* MQTT_ZOE_SOC= "car/renault/soc";  // current power draw for all charge points
+const char* MQTT_TESLA_SOC= "car/tesla/soc";  // current power draw for all charge points
+const char* MQTT_LP1_PlugStat = "evcc/loadpoints/1/connected"; // is the car plugged in?
+const char* MQTT_LP1_IsCharging = "evcc/loadpoints/1/charging"; // charging active?
+const char* MQTT_HB_W = "evcc/site/batteryPower"; // HouseBattery Charge/Discharge
+const char* MQTT_HB_SOC = "evcc/site/batterySoc"; // HouseBattery Charge/Discharge
+const char* MQTT_HOUSE_W = "evcc/site/homePower"; // House Load
+const char* MQTT_HEATING_W = "solar/wwp/power"; // Heating Power
+//#else
 // Topics for openwb2.0 *** Not at the moment implemented // ** need to be checked if its the correct number
+/*#ifndef JSON
 const char* MQTT_EVU_W =          "openWB/counter/0/get/power";             // current power at EVU                       **
 const char* MQTT_PV_W =           "openWB/pv/get/power";                    // current PV power
 const char* MQTT_LP_all_W=        "openWB/chargepoint/get/power";           // current power draw for all charge points
-const char* MQTT_LP1_SOC=         "openWB/vehicle/0/get/soc";               // current power draw for all charge points   **
-const char* MQTT_LP1_PlugStat =   "openWB/chargepoint/5/get/plug_state";    // is the car plugged in?                     **
-const char* MQTT_LP1_IsCharging = "openWB/chargepoint/5/get/charge_state";  // charging active?                           **
+const char* MQTT_ZOE_SOC=         "openWB/vehicle/0/get/soc";               // current soc for Zoe   **
+const char* MQTT_TESLA_SOC=       "openWB/vehicle/7/get/soc";               // current soc for Tesla   **
 const char* MQTT_HB_W =           "openWB/bat/get/power";                   // HouseBattery Charge/Discharge
 const char* MQTT_HB_SOC =         "openWB/bat/get/soc";                     // HouseBattery Charge/Discharge
-const char* MQTT_HOUSE_W =        "openWB/global/WHouseConsumption";        // House Load ***
-const char* MQTT_HEATING_W =      "openWB/LegacySmartHome/Devices/1/Watt";  // Heating Power
-const char* MQTT_SYSTEM_JSON =    "openWB/system/lastlivevaluesJson";       // Last Live Value in JSON-Format
+const char* MQTT_HOUSE_W =        "openWB/counter/set/home_consumption";    // House Load
 #endif
+const char* MQTT_SYSTEM_JSON =    "openWB/system/lastlivevaluesJson";       // Last Live Value in JSON-Format
+
+const char* MQTT_HEATING_W =      "openWB/LegacySmartHome/Devices/1/Watt";  // Heating Power
+const char* MQTT_LP1_PlugStat =   "openWB/chargepoint/5/get/plug_state";    // is the car plugged in?                     **
+const char* MQTT_LP1_IsCharging = "openWB/chargepoint/5/get/charge_state";  // charging active?                           **
+#endif
+*/
 
 // init the Topicvalues
 int EVU_W[] = {0, 0};
@@ -82,7 +90,8 @@ int EVU_dir[] = {1, 1};
 int HB_dir = 1;
 int PV_W[] = {0, 0};
 int LP_all_W[] = {0, 0};
-int LP1_SOC[] = {0, 0};
+int ZOE_SOC[] = {0, 0};
+int TESLA_SOC[] = {0, 0};
 bool LP1_PlugStat[] = {false, false};
 bool LP1_IsCharging = false;
 int HB_W[] = {0, 0};
@@ -188,10 +197,10 @@ void WriteLog(String msg,bool NewLine=1)  // helper function for logging, only w
 
 boolean MQTTReconnect() 
 {
-  if (MQTTClient.connect(hostname)) 
+  if (MQTTClient.connect(hostname,user,password)) 
   {
     WriteLog("MQTT Reconnected");
-    boolean r = MQTTClient.subscribe(MQTT_EVU_W);
+    boolean r = MQTTClient.subscribe(MQTT_LP1_IsCharging);
     if (r)
     {
         WriteLog("MQTT subscription suceeded");
@@ -201,13 +210,15 @@ boolean MQTTReconnect()
         WriteLog("MQTT subscription failed");
     }
     #ifndef JSON
+    r = MQTTClient.subscribe(MQTT_EVU_W);
     r = MQTTClient.subscribe(MQTT_LP_all_W);
     r = MQTTClient.subscribe(MQTT_PV_W);
-    r = MQTTClient.subscribe(MQTT_LP1_SOC);
+    r = MQTTClient.subscribe(MQTT_ZOE_SOC);
+    r = MQTTClient.subscribe(MQTT_TESLA_SOC);
     r = MQTTClient.subscribe(MQTT_HB_W);
     r = MQTTClient.subscribe(MQTT_HOUSE_W);
-    #endif
     r = MQTTClient.subscribe(MQTT_HB_SOC);
+    #endif
     r = MQTTClient.subscribe(MQTT_HEATING_W);
     r = MQTTClient.subscribe(MQTT_LP1_IsCharging);
     r = MQTTClient.subscribe(MQTT_LP1_PlugStat);
@@ -254,7 +265,7 @@ void MQTTCallback(char* topic, byte* payload, unsigned int length)
   // store values in variables
   // todo use MQTT_ constants instead of hard coded values to compare
   #ifndef JSON
-  if (strcmp(topic,MQTT_EVU_W)==0){ EVU_W[0] = (msg.toInt()); EVU_dir[0] = 1;
+  if (strcmp(topic,MQTT_EVU_W)==0){ EVU_W[0] = (msg.toInt()*1); EVU_dir[0] = 1;
                                         if (EVU_W[0] < 0)
                                         {
                                            EVU_W[0] = EVU_W[0]*(-1);
@@ -263,31 +274,36 @@ void MQTTCallback(char* topic, byte* payload, unsigned int length)
                                       }
   if (strcmp(topic,MQTT_HOUSE_W)==0){HOUSE_W[0] = msg.toInt();}
   if (strcmp(topic,MQTT_LP_all_W)==0){LP_all_W[0] = msg.toInt();}
-  if (strcmp(topic,MQTT_PV_W)==0){PV_W[0] = (msg.toInt()*-1);}
-  if (strcmp(topic,MQTT_LP1_SOC)==0){LP1_SOC[0] = msg.toInt();}
-  if (strcmp(topic,MQTT_HB_W)==0){ HB_W[0] = (msg.toInt()); HB_dir = 1;
+  if (strcmp(topic,MQTT_PV_W)==0){PV_W[0] = (msg.toInt()*1);}
+  if (strcmp(topic,MQTT_ZOE_SOC)==0){ZOE_SOC[0] = msg.toInt();}
+  if (strcmp(topic,MQTT_TESLA_SOC)==0){TESLA_SOC[0] = msg.toInt();}
+  if (strcmp(topic,MQTT_HB_W)==0){ HB_W[0] = (msg.toInt()); HB_dir = -1;
                                         if (HB_W[0] < 0)
                                         {
                                            HB_W[0] = HB_W[0]*(-1);
-                                           HB_dir = -1;
+                                           HB_dir = 1;
                                         }}
   if (strcmp(topic,MQTT_HB_SOC)==0){HB_SOC[0] = msg.toInt();}
   #endif
+
+  //#ifndef OPENWB2
+  //if (strcmp(topic,MQTT_LP1_IsCharging)==0){LP1_IsCharging = msg.toInt();}
+  //if (strcmp(topic,MQTT_LP1_PlugStat)==0){LP1_PlugStat[0] = msg.toInt();}
+  //#else
+  if (strcmp(topic,MQTT_LP1_IsCharging)==0){String stringTemp = msg.substring(0);
+  if (stringTemp == "true") {LP1_IsCharging = true;} else {LP1_IsCharging = false;}}
   
-  if (strcmp(topic,MQTT_HB_SOC)==0){HB_SOC[0] = msg.toInt();}
-  
-  if (strcmp(topic,MQTT_LP1_IsCharging)==0){LP1_IsCharging = msg.toInt();}
-  
-  if (strcmp(topic,MQTT_LP1_PlugStat)==0){LP1_PlugStat[0] = msg.toInt();}
-  //  String test = String(LP1_PlugStat[0]);
-  //  WriteLog(msg);
+  if (strcmp(topic,MQTT_LP1_PlugStat)==0){String stringTemp = msg.substring(0);
+  if (stringTemp == "true") {LP1_PlugStat[0] = true;} else {LP1_PlugStat[0] = false;}}
+
+  //#endif
   if (strcmp(topic,MQTT_HEATING_W)==0){HEATING_W[0] = msg.toInt();}
   
   #ifdef JSON // Values over JSON
   if (strcmp(topic,MQTT_SYSTEM_JSON)==0)
     {
       SYSTEM_JSON = msg;
-      StaticJsonDocument <256> doc;
+      StaticJsonDocument <512> doc;
       deserializeJson(doc,SYSTEM_JSON);
 
       // EVU POWER IN W
@@ -299,22 +315,36 @@ void MQTTCallback(char* topic, byte* payload, unsigned int length)
             EVU_W[0] = EVU_W[0]*(-1);
             EVU_dir[0] = -1;
         }
-      // HOUSE POWER IN W
+      
+        // HOUSE POWER IN W
       float house_json = doc["house-power"];
-      HOUSE_W[0] = house_json * 1000;
+      #ifdef OPENWB2
+      HOUSE_W[0] = (house_json * 1000) - HEATING_W[0];
+      #else
+      HOUSE_W[0] = (house_json * 1000);
+      #endif
+      
       // CHARGING ALL
       float lp_json = doc["charging-all"];
       LP_all_W[0] = lp_json * 1000;
+      
       // PV ALL
       float pv_json = doc["pv-all"];
-      PV_W[0] = pv_json * 1000;
+      if ((pv_json * 1000) < 0)
+        { PV_W[0] = 0; }
+      else 
+        { PV_W[0] = pv_json * 1000; }
+      
       // EV SOC
       int ev_soc_json = doc["ev0-soc"];
-      LP1_SOC[0] = ev_soc_json;
-      // HOUSE BATTERY SOC            ** DIDNT WORK AT THE MOMENT OVER JSON
-      //int hb_soc_json = doc["bat-all-soc"];
-      //HB_SOC[0] = int(hb_soc_json);
-      //Serial.println(hb_soc_json);
+      ZOE_SOC[0] = ev_soc_json;
+      int ev2_soc_json = doc["ev7-soc"];
+      TESLA_SOC[0] = ev2_soc_json;
+
+      // HOUSE BATTERY SOC
+      int hb_soc_json = doc["bat-all-soc"];
+      HB_SOC[0] = hb_soc_json * 1;
+      
       // HOUSE BATTERY
       float hb_json = doc["bat-all-power"];
       HB_W[0] = hb_json * 1000;
@@ -323,6 +353,7 @@ void MQTTCallback(char* topic, byte* payload, unsigned int length)
             HB_W[0] = HB_W[0]*(-1);
             HB_dir = -1;
         }
+      else {HB_dir = 1;}
     }
   #endif
   // processed incoming message, lets update the display
@@ -643,21 +674,21 @@ void UpdateDisplay()
         display.setCursor(SCREEN_WIDTH-2*12,SCREEN_HEIGHT/3*1+25);
         display.setTextColor(ST77XX_WHITE);
         display.print(String(HB_SOC[0])+"%");
-        drawBar(SCREEN_HEIGHT/2+15, HB_SOC[0]);
+        drawBar(SCREEN_HEIGHT/2+15, HB_SOC[0],5);
       }
       else if (HB_SOC[0] < 100)
       {
         display.setCursor(SCREEN_WIDTH-3*12,SCREEN_HEIGHT/3*1+25);
         display.setTextColor(ST77XX_WHITE);
         display.print(String(HB_SOC[0])+"%");
-        drawBar(SCREEN_HEIGHT/2+15, HB_SOC[0]);
+        drawBar(SCREEN_HEIGHT/2+15, HB_SOC[0],5);
       }
       else
       {
         display.setCursor(SCREEN_WIDTH-4*12,SCREEN_HEIGHT/3*1+25);
         display.setTextColor(ST77XX_WHITE);
         display.print(String(HB_SOC[0])+"%");
-        drawBar(SCREEN_HEIGHT/2+15, HB_SOC[0]);
+        drawBar(SCREEN_HEIGHT/2+15, HB_SOC[0],5);
       }
     HB_SOC[1] = HB_SOC[0];
     }
@@ -687,9 +718,8 @@ void UpdateDisplay()
     }
     if (LP_all_W[0] != LP_all_W[1] || initScreen)
       {
-        display.setCursor(SCREEN_WIDTH/2+2*6,SCREEN_HEIGHT/3*2+19); // Text size 1 has width of 6
-
-        display.println("SoC LP1"); // Charge Status
+        //display.setCursor(SCREEN_WIDTH/2+2*6,SCREEN_HEIGHT/3*2+19); // Text size 1 has width of 6
+        //display.println("SoC LP1"); // Charge Status
         display.setTextColor(ST77XX_WHITE);
         display.setTextSize(2);
         WriteWattValue(LP_all_W[1], SCREEN_WIDTH/2-shift_k_value-shift_dot, SCREEN_HEIGHT/3*2+29, ST77XX_BLACK);
@@ -697,49 +727,96 @@ void UpdateDisplay()
         LP_all_W[1] = LP_all_W[0];
       }
 
-    if (LP1_SOC[0] != LP1_SOC[1] || initScreen)
+    // Zoe Soc anzeigen
+    if (ZOE_SOC[0] != ZOE_SOC[1] || initScreen)
     { 
       display.setTextSize(2);
-      if (LP1_SOC[1] < 10)
+      if (ZOE_SOC[1] < 10)
       {
         display.setCursor(SCREEN_WIDTH-2*12,SCREEN_HEIGHT/3*2+29);
         display.setTextColor(ST77XX_BLACK);
-        display.print(String(LP1_SOC[1])+"%");
+        display.print(String(ZOE_SOC[1])+"%");
       }
-      else if (LP1_SOC[1] < 100)
+      else if (ZOE_SOC[1] < 100)
       {
         display.setCursor(SCREEN_WIDTH-3*12,SCREEN_HEIGHT/3*2+29);
         display.setTextColor(ST77XX_BLACK);
-        display.print(String(LP1_SOC[1])+"%");
+        display.print(String(ZOE_SOC[1])+"%");
       }
       else
       {
         display.setCursor(SCREEN_WIDTH-4*12,SCREEN_HEIGHT/3*2+29);
         display.setTextColor(ST77XX_BLACK);
-        display.print(String(LP1_SOC[1])+"%");
+        display.print(String(ZOE_SOC[1])+"%");
       }
-      if (LP1_SOC[0] < 10)
+      if (ZOE_SOC[0] < 10)
       {
         display.setCursor(SCREEN_WIDTH-2*12,SCREEN_HEIGHT/3*2+29);
         display.setTextColor(ST77XX_WHITE);
-        display.print(String(LP1_SOC[0])+"%");
-        drawBar(SCREEN_HEIGHT-6, LP1_SOC[0]);
+        display.print(String(ZOE_SOC[0])+"%");
+        drawBar(SCREEN_HEIGHT-3, ZOE_SOC[0], 2);
       }
-      else if (LP1_SOC[0] < 100)
+      else if (ZOE_SOC[0] < 100)
       {
         display.setCursor(SCREEN_WIDTH-3*12,SCREEN_HEIGHT/3*2+29);
         display.setTextColor(ST77XX_WHITE);
-        display.print(String(LP1_SOC[0])+"%");
-        drawBar(SCREEN_HEIGHT-6, LP1_SOC[0]);
+        display.print(String(ZOE_SOC[0])+"%");
+        drawBar(SCREEN_HEIGHT-3, ZOE_SOC[0], 2);
       }
       else
       {
         display.setCursor(SCREEN_WIDTH-4*12,SCREEN_HEIGHT/3*2+29);
         display.setTextColor(ST77XX_WHITE);
-        display.print(String(LP1_SOC[0])+"%");
-        drawBar(SCREEN_HEIGHT-6, LP1_SOC[0]);
+        display.print(String(ZOE_SOC[0])+"%");
+        drawBar(SCREEN_HEIGHT-3, ZOE_SOC[0], 2);
       }
-      LP1_SOC[1] = LP1_SOC[0];
+      ZOE_SOC[1] = ZOE_SOC[0];
+    }
+
+    // Tesla Soc anzeigen
+    if (TESLA_SOC[0] != TESLA_SOC[1] || initScreen)
+    { 
+      display.setTextSize(2);
+      if (TESLA_SOC[1] < 10)
+      {
+        display.setCursor(SCREEN_WIDTH-2*12,SCREEN_HEIGHT/3*2+10);
+        display.setTextColor(ST77XX_BLACK);
+        display.print(String(TESLA_SOC[1])+"%");
+      }
+      else if (TESLA_SOC[1] < 100)
+      {
+        display.setCursor(SCREEN_WIDTH-3*12,SCREEN_HEIGHT/3*2+10);
+        display.setTextColor(ST77XX_BLACK);
+        display.print(String(TESLA_SOC[1])+"%");
+      }
+      else
+      {
+        display.setCursor(SCREEN_WIDTH-4*12,SCREEN_HEIGHT/3*2+10);
+        display.setTextColor(ST77XX_BLACK);
+        display.print(String(TESLA_SOC[1])+"%");
+      }
+      if (TESLA_SOC[0] < 10)
+      {
+        display.setCursor(SCREEN_WIDTH-2*12,SCREEN_HEIGHT/3*2+10);
+        display.setTextColor(ST77XX_WHITE);
+        display.print(String(TESLA_SOC[0])+"%");
+        drawBar(SCREEN_HEIGHT-6, TESLA_SOC[0], 2);
+      }
+      else if (TESLA_SOC[0] < 100)
+      {
+        display.setCursor(SCREEN_WIDTH-3*12,SCREEN_HEIGHT/3*2+10);
+        display.setTextColor(ST77XX_WHITE);
+        display.print(String(TESLA_SOC[0])+"%");
+        drawBar(SCREEN_HEIGHT-6, TESLA_SOC[0], 2);
+      }
+      else
+      {
+        display.setCursor(SCREEN_WIDTH-4*12,SCREEN_HEIGHT/3*2+10);
+        display.setTextColor(ST77XX_WHITE);
+        display.print(String(TESLA_SOC[0])+"%");
+        drawBar(SCREEN_HEIGHT-6, TESLA_SOC[0], 2);
+      }
+      TESLA_SOC[1] = TESLA_SOC[0];
     }
 
   // drawing if energy is imported or exported
@@ -820,30 +897,30 @@ void UpdateDisplay()
   {
     WriteLog("Plugged IN");
     // charging, drawing plugged car only - IMPORTANT BUG POSSIBLE POWER SYMBOL COULD STAY, MIGHT NEED ST77XX_BLACK SQUARE DRAWING
-    display.drawBitmap(SCREEN_WIDTH/2-14, SCREEN_HEIGHT/3*2+5, unplugged, 20, 10, ST77XX_BLACK);
-    display.drawBitmap(SCREEN_WIDTH/2-14, SCREEN_HEIGHT/3*2+5, plugged, 24, 10, ST77XX_WHITE);
+    display.drawBitmap(15, SCREEN_HEIGHT/3*2+5, unplugged, 20, 10, ST77XX_BLACK);
+    display.drawBitmap(15, SCREEN_HEIGHT/3*2+5, plugged, 24, 10, ST77XX_WHITE);
     LP1_PlugStat[1] = LP1_PlugStat[0];
   }
   else if ((LP1_PlugStat[0] != LP1_PlugStat[1]) || initScreen)
   {
     WriteLog("UNPLUGGED DRAWING");
     // charging, drawing unplugged car only - IMPORTANT BUG POSSIBLE POWER SYMBOL COULD STAY, MIGHT NEED ST77XX_BLACK SQUARE DRAWING
-    display.drawBitmap(SCREEN_WIDTH/2-14, SCREEN_HEIGHT/3*2+5, plugged, 24, 10, ST77XX_BLACK);
-    display.drawBitmap(SCREEN_WIDTH/2-14, SCREEN_HEIGHT/3*2+5, unplugged, 20, 10, ST77XX_WHITE);
+    display.drawBitmap(15, SCREEN_HEIGHT/3*2+5, plugged, 24, 10, ST77XX_BLACK);
+    display.drawBitmap(15, SCREEN_HEIGHT/3*2+5, unplugged, 20, 10, ST77XX_WHITE);
     LP1_PlugStat[1] = LP1_PlugStat[0];
   }
-  
+
   if(LP1_IsCharging)
   {
     // charging, drawing plugged car plus Power symbol
-    display.drawBitmap(SCREEN_WIDTH/2-14, SCREEN_HEIGHT/3*2+5, plugged, 24, 10, ST77XX_WHITE);
-    display.drawBitmap(SCREEN_WIDTH/2-14+24+2, SCREEN_HEIGHT/3*2+5, blitz, 8, 10, ST77XX_YELLOW);
+    display.drawBitmap(15, SCREEN_HEIGHT/3*2+5, plugged, 24, 10, ST77XX_WHITE);
+    display.drawBitmap(15+24+2, SCREEN_HEIGHT/3*2+5, blitz, 8, 10, ST77XX_YELLOW);
   }
   else
   {
     // charging, drawing plugged car plus Power symbol
     //display.drawBitmap(SCREEN_WIDTH/2-14, SCREEN_HEIGHT/3*2-4, plugged, 24, 10, ST77XX_BLACK);
-    display.drawBitmap(SCREEN_WIDTH/2-14+24+2, SCREEN_HEIGHT/3*2+5, blitz, 8, 10, ST77XX_BLACK);
+    display.drawBitmap(15+24+2, SCREEN_HEIGHT/3*2+5, blitz, 8, 10, ST77XX_BLACK);
   }
 
  initScreen = false; 
@@ -999,7 +1076,7 @@ void loop()
   ArduinoOTA.handle();
 }
 
-void drawBar (int height, int percent)
+void drawBar (int heightpos, int percent, int height)
 {
   int redpos = SCREEN_WIDTH*batteryRedPercent/100;
   int yellowpos = SCREEN_WIDTH*batteryYellowPercent/100;
@@ -1007,18 +1084,18 @@ void drawBar (int height, int percent)
   int npos = SCREEN_WIDTH*(100-percent)/100;
   if (pos <= redpos)
     {
-      display.fillRect(0, height, pos, 5, ST77XX_RED);  
+      display.fillRect(0, heightpos, pos, height, ST77XX_RED);  
     }
   else if (pos > redpos && pos <= yellowpos)
     {
-      display.fillRect(0, height, redpos, 5, ST77XX_RED);  
-      display.fillRect(redpos, height, pos-redpos, 5, ST77XX_YELLOW);  
+      display.fillRect(0, heightpos, redpos, height, ST77XX_RED);  
+      display.fillRect(redpos, heightpos, pos-redpos, height, ST77XX_YELLOW);  
     }
   else if (pos > redpos && pos > yellowpos)
     {
-      display.fillRect(0, height, redpos, 5, ST77XX_RED);  
-      display.fillRect(redpos, height, yellowpos-redpos, 5, ST77XX_YELLOW);
-      display.fillRect(yellowpos, height, pos-yellowpos, 5, ST77XX_GREEN);
+      display.fillRect(0, heightpos, redpos, height, ST77XX_RED);  
+      display.fillRect(redpos, heightpos, yellowpos-redpos, height, ST77XX_YELLOW);
+      display.fillRect(yellowpos, heightpos, pos-yellowpos, height, ST77XX_GREEN);
     }
-  display.fillRect(pos, height, npos, 5, ST77XX_BLACK);
+  display.fillRect(pos, heightpos, npos, height, ST77XX_BLACK);
 }
