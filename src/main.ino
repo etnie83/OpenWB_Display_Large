@@ -668,7 +668,7 @@ void UpdateDisplay()
       if (ZOE_SOC[0] < 10)
       {
         display.setCursor(SCREEN_WIDTH-2*12,SCREEN_HEIGHT/3*2+29);
-        if (LP1_VEHICLE_NAME[0] == "Zoe")
+        if (LP1_VEHICLE_NAME[0] == "Zoe" && LP1_PlugStat[0]==true)
         {display.setTextColor(ST77XX_GREEN);}
         else
         {display.setTextColor(ST77XX_WHITE);}
@@ -678,7 +678,7 @@ void UpdateDisplay()
       else if (ZOE_SOC[0] < 100)
       {
         display.setCursor(SCREEN_WIDTH-3*12,SCREEN_HEIGHT/3*2+29);
-        if (LP1_VEHICLE_NAME[0] == "Zoe")
+        if (LP1_VEHICLE_NAME[0] == "Zoe" && LP1_PlugStat[0]==true)
         {display.setTextColor(ST77XX_GREEN);}
         else
         {display.setTextColor(ST77XX_WHITE);}
@@ -688,7 +688,7 @@ void UpdateDisplay()
       else
       {
         display.setCursor(SCREEN_WIDTH-4*12,SCREEN_HEIGHT/3*2+29);
-        if (LP1_VEHICLE_NAME[0] == "Zoe")
+        if (LP1_VEHICLE_NAME[0] == "Zoe" && LP1_PlugStat[0]==true)
         {display.setTextColor(ST77XX_GREEN);}
         else
         {display.setTextColor(ST77XX_WHITE);}
@@ -723,7 +723,7 @@ void UpdateDisplay()
       if (TESLA_SOC[0] < 10)
       {
         display.setCursor(SCREEN_WIDTH-2*12,SCREEN_HEIGHT/3*2+10);
-        if (LP1_VEHICLE_NAME[0] == "Tesla")
+        if (LP1_VEHICLE_NAME[0] == "Tesla" && LP1_PlugStat[0]==true)
         {display.setTextColor(ST77XX_GREEN);}
         else
         {display.setTextColor(ST77XX_WHITE);}
@@ -733,7 +733,7 @@ void UpdateDisplay()
       else if (TESLA_SOC[0] < 100)
       {
         display.setCursor(SCREEN_WIDTH-3*12,SCREEN_HEIGHT/3*2+10);
-        if (LP1_VEHICLE_NAME[0] == "Tesla")
+        if (LP1_VEHICLE_NAME[0] == "Tesla" && LP1_PlugStat[0]==true)
         {display.setTextColor(ST77XX_GREEN);}
         else
         {display.setTextColor(ST77XX_WHITE);}
@@ -743,7 +743,7 @@ void UpdateDisplay()
       else
       {
         display.setCursor(SCREEN_WIDTH-4*12,SCREEN_HEIGHT/3*2+10);
-        if (LP1_VEHICLE_NAME[0] == "Tesla")
+        if (LP1_VEHICLE_NAME[0] == "Tesla" && LP1_PlugStat[0]==true)
         {display.setTextColor(ST77XX_GREEN);}
         else
         {display.setTextColor(ST77XX_WHITE);}
