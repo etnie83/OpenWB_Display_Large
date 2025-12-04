@@ -644,7 +644,7 @@ void UpdateDisplay()
       }
 
     // Zoe Soc anzeigen
-    if (ZOE_SOC[0] != ZOE_SOC[1] || LP1_VEHICLE_NAME[0] != LP1_VEHICLE_NAME[1] || initScreen)
+    if (ZOE_SOC[0] != ZOE_SOC[1] || LP1_VEHICLE_NAME[0] != LP1_VEHICLE_NAME[1] || LP1_PlugStat[0] != LP1_PlugStat[1] || initScreen)
     { 
       display.setTextSize(2);
       if (ZOE_SOC[1] < 10)
@@ -699,7 +699,7 @@ void UpdateDisplay()
     }
 
     // Tesla Soc anzeigen
-    if (TESLA_SOC[0] != TESLA_SOC[1] || LP1_VEHICLE_NAME[0] != LP1_VEHICLE_NAME[1] || initScreen)
+    if (TESLA_SOC[0] != TESLA_SOC[1] || LP1_VEHICLE_NAME[0] != LP1_VEHICLE_NAME[1] || LP1_PlugStat[0] != LP1_PlugStat[1] || initScreen)
     { 
       display.setTextSize(2);
       if (TESLA_SOC[1] < 10)
@@ -752,6 +752,7 @@ void UpdateDisplay()
       }
       TESLA_SOC[1] = TESLA_SOC[0];
       LP1_VEHICLE_NAME[1] = LP1_VEHICLE_NAME[0];
+      LP1_PlugStat[1] = LP1_PlugStat[0];
     }
 
   // drawing if energy is imported or exported
