@@ -24,8 +24,8 @@ Adafruit_ST7735 display = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST);
 // ***********************************
 
 // Network setup
-const char* ssid = "LiehgenLAN";              // your network SSID (name)
-const char* pass = "26519452651945";        // your network password
+const char* ssid = "WLANSSID";              // your network SSID (name)
+const char* pass = "WLANPASSWORD";        // your network password
 const char* hostname = "openWB-DisplayLarge";   // "openWB-DisplayLargeTest" oder "openWB-DisplayLarge"
 const char* user = "displaylarge";    // "displaylarge" oder "displaylargetest"
 const char* password = "displaylarge";
