@@ -27,8 +27,8 @@ Adafruit_ST7735 display = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST);
 const char* ssid = "LiehgenLAN";              // your network SSID (name)
 const char* pass = "26519452651945";        // your network password
 const char* hostname = "openWB-DisplayLarge";   // "openWB-DisplayLargeTest" oder "openWB-DisplayLarge"
-const char* user = "mqtt_smart";
-const char* password = "mqtt_smart_password321";
+const char* user = "displaylarge";    // "displaylarge" oder "displaylargetest"
+const char* password = "displaylarge";
 
 // MQTT Setup
 IPAddress MQTT_Broker(192,168,0,60); // openWB IP address
@@ -51,8 +51,8 @@ const char* MQTT_TESLA_SOC= "car/tesla/soc";  // current power draw for all char
 const char* MQTT_LP1_PlugStat = "evcc/loadpoints/1/connected"; // is the car plugged in?
 const char* MQTT_LP1_IsCharging = "evcc/loadpoints/1/charging"; // charging active?
 const char* MQTT_LP1_VEHICLE_NAME = "evcc/loadpoints/1/vehicleTitle"; // Active Vehicle on Loadpoint 1
-const char* MQTT_HB_W = "evcc/site/batteryPower"; // HouseBattery Charge/Discharge
-const char* MQTT_HB_SOC = "evcc/site/batterySoc"; // HouseBattery Charge/Discharge
+const char* MQTT_HB_W = "evcc/site/battery/power"; // HouseBattery Charge/Discharge
+const char* MQTT_HB_SOC = "evcc/site/battery/soc"; // HouseBattery Charge/Discharge
 const char* MQTT_HOUSE_W = "evcc/site/homePower"; // House Load
 const char* MQTT_HEATING_W = "solar/wwp/power"; // Heating Power
 
