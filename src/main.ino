@@ -1,10 +1,11 @@
+#include "credentials.h"
 #include <ESP8266WiFi.h>
-#include <WiFiUDP.h>
+//#include <WiFiUDP.h>
 #include <ESP8266mDNS.h>
 #include <ESP8266WebServer.h>
 #include <ESP8266HTTPUpdateServer.h>
 #include <PubSubClient.h>
-#include <Wire.h>
+//#include <Wire.h>
 //#include <Adafruit_SSD1306.h>
 #include <Adafruit_GFX.h>    // Core graphics library
 #include <Adafruit_ST7735.h> // Hardware-specific library for ST7735
@@ -24,18 +25,19 @@ Adafruit_ST7735 display = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST);
 // ***********************************
 
 // Network setup
-const char* ssid = "WLANSSID";              // your network SSID (name)
-const char* pass = "WLANPASSWORD";        // your network password
-const char* hostname = "openWB-DisplayLarge";   // "openWB-DisplayLargeTest" oder "openWB-DisplayLarge"
-const char* user = "displaylarge";    // "displaylarge" oder "displaylargetest"
-const char* password = "displaylarge";
+const char* ssid      = WIFI_SSID;              // your network SSID (name)
+const char* pass      = WIFI_PASS;        // your network password
+const char* hostname = DEVICE_HOST;   // kommt aus build_flags
+const char* user     = MQTT_USER;     // kommt aus build_flags
+const char* password = MQTT_PASS;     // kommt aus build_flags
 
 // MQTT Setup
-IPAddress MQTT_Broker(192,168,0,60); // openWB IP address
+IPAddress MQTT_Broker(192,168,0,60); // EVCC IP address
 const int MQTT_Broker_Port = 1883;
 bool initScreen = true;
 // variables for retrieved values
 unsigned long previousMillisTimer = 0; 
+unsigned long errorDisplayedAt = 0;
 const long interval = 500; 
 bool NewData = false;
 bool ErrorWasActive = false;
@@ -191,7 +193,7 @@ boolean MQTTReconnect()
     r = MQTTClient.subscribe(MQTT_HOUSE_W);
     r = MQTTClient.subscribe(MQTT_HB_SOC);
     r = MQTTClient.subscribe(MQTT_HEATING_W);
-    r = MQTTClient.subscribe(MQTT_LP1_IsCharging);
+//    r = MQTTClient.subscribe(MQTT_LP1_IsCharging);
     r = MQTTClient.subscribe(MQTT_LP1_PlugStat);
     r = MQTTClient.subscribe(MQTT_LP1_VEHICLE_NAME);
   }
@@ -255,10 +257,6 @@ void MQTTCallback(char* topic, byte* payload, unsigned int length)
   if (strcmp(topic,MQTT_HB_SOC)==0){HB_SOC[0] = msg.toInt();}
   #endif
 
-  //#ifndef OPENWB2
-  //if (strcmp(topic,MQTT_LP1_IsCharging)==0){LP1_IsCharging = msg.toInt();}
-  //if (strcmp(topic,MQTT_LP1_PlugStat)==0){LP1_PlugStat[0] = msg.toInt();}
-  //#else
   if (strcmp(topic,MQTT_LP1_IsCharging)==0){String stringTemp = msg.substring(0);
   if (stringTemp == "true") {LP1_IsCharging = true;} else {LP1_IsCharging = false;}}
   
@@ -363,30 +361,25 @@ void WriteWattValue(int Watt, int x, int y, uint16_t color, int textsize = 2)
         display.print(String(D_Watt_kW));
       }
     }
-    else
+    else  // Watt >= 10000
     {
-      int D_Watt_kW=Watt/1000;
-      int D_Watt_W=(Watt%1000)/10;
-      if (D_Watt_W <100)
-      {
-        display.setCursor(x-2*charsize, y);
-        display.setTextColor(color);
-        display.print("0"+String(D_Watt_W));
-        display.setCursor(x-3*charsize+shift_dot, y);
-        display.print(".");
-        display.setCursor(x-5*charsize+shift_k_value+shift_dot, y);
-        display.print(String(D_Watt_kW));
-      }
-      else
-      {
-        display.setCursor(x-2*charsize, y);
-        display.setTextColor(color);
-        display.print(String(D_Watt_W));
-        display.setCursor(x-3*charsize+shift_dot, y);
-        display.print(".");
-        display.setCursor(x-5*charsize+shift_k_value+shift_dot, y);
-        display.print(String(D_Watt_kW));
-      }
+      int D_Watt_kW  = Watt / 1000;              // z.B. 10, 11, 12
+      int D_Watt_dec = (Watt % 1000 + 50) / 100; // 1 Stelle gerundet (0-9)
+      if (D_Watt_dec >= 10) { D_Watt_kW++; D_Watt_dec = 0; }
+
+      // Format: "XX.X" → 4 Zeichen breit
+      // Dezimalstelle (1 Zeichen)
+      display.setCursor(x - 1 * charsize, y);
+      display.setTextColor(color);
+      display.print(String(D_Watt_dec));
+
+      // Punkt
+      display.setCursor(x - 2 * charsize + shift_dot, y);
+      display.print(".");
+
+      // kW-Wert (2 Zeichen, z.B. "10", "11")
+      display.setCursor(x - 4 * charsize + shift_k_value + shift_dot, y);
+      display.print(String(D_Watt_kW));
     }
   }
 }
@@ -874,7 +867,7 @@ void setup()
   while (!Serial) { // wait for serial port to connect. 
     ; 
   }
-  WriteLog("openWB Display Init");
+  WriteLog("EVCC Display Init");
 
     // Use this initializer if using a 1.8" TFT screen:
   display.initR(INITR_BLACKTAB);      // Init ST7735S chip, black tab
@@ -925,7 +918,8 @@ void setup()
   MQTTClient.setServer(MQTT_Broker,MQTT_Broker_Port);
   MQTTClient.setCallback(MQTTCallback);
   lastReconnectAttempt = 0;
-  MQTTReconnect;
+  MQTTReconnect();
+  lastMQTTDataReceived = millis();
   
   WriteLog("Exiting Setup, starting main loop");
 
@@ -978,13 +972,9 @@ void loop()
     { 
         // do things
     }
-  if (ErrorWasActive)
-  {
-    initScreen = true;
-    ErrorWasActive = false;
-  }
-  else if (millis()-lastMQTTDataReceived > MaxDataAge && !ErrorWasActive)
-  {
+
+if (millis() - lastMQTTDataReceived > MaxDataAge && !ErrorWasActive)
+{
     display.setCursor(0,0);
     display.fillScreen(ST77XX_BLACK);
     display.setTextSize(3);
@@ -992,8 +982,14 @@ void loop()
     display.println("Error");
     display.println("no data");
     ErrorWasActive = true;
-    delay(2000);
-  }
+    errorDisplayedAt = millis();  // Zeitstempel merken
+}
+
+if (ErrorWasActive && millis() - errorDisplayedAt > 2000)
+{
+    initScreen = true;
+    ErrorWasActive = false;
+}
 
   MQTTClient.loop();                    // handle MQTT client & subscription. Display logic is subscription event triggered and can be found in the callback function.
   server.handleClient();                // handle webserver requests
@@ -1014,24 +1010,27 @@ void loop()
 
 void drawBar (int heightpos, int percent, int height)
 {
-  int redpos = SCREEN_WIDTH*batteryRedPercent/100;
-  int yellowpos = SCREEN_WIDTH*batteryYellowPercent/100;
-  int pos = SCREEN_WIDTH*percent/100;
-  int npos = SCREEN_WIDTH*(100-percent)/100;
+  int redpos    = SCREEN_WIDTH * batteryRedPercent / 100;
+  int yellowpos = SCREEN_WIDTH * batteryYellowPercent / 100;
+  int pos       = SCREEN_WIDTH * percent / 100;
+
+  // Erst ALLES schwarz löschen
+  display.fillRect(0, heightpos, SCREEN_WIDTH, height, ST77XX_BLACK);
+
+  // Dann farbig zeichnen
   if (pos <= redpos)
-    {
-      display.fillRect(0, heightpos, pos, height, ST77XX_RED);  
-    }
-  else if (pos > redpos && pos <= yellowpos)
-    {
-      display.fillRect(0, heightpos, redpos, height, ST77XX_RED);  
-      display.fillRect(redpos, heightpos, pos-redpos, height, ST77XX_YELLOW);  
-    }
-  else if (pos > redpos && pos > yellowpos)
-    {
-      display.fillRect(0, heightpos, redpos, height, ST77XX_RED);  
-      display.fillRect(redpos, heightpos, yellowpos-redpos, height, ST77XX_YELLOW);
-      display.fillRect(yellowpos, heightpos, pos-yellowpos, height, ST77XX_GREEN);
-    }
-  display.fillRect(pos, heightpos, npos, height, ST77XX_BLACK);
+  {
+    display.fillRect(0, heightpos, pos, height, ST77XX_RED);
+  }
+  else if (pos <= yellowpos)
+  {
+    display.fillRect(0, heightpos, redpos, height, ST77XX_RED);
+    display.fillRect(redpos, heightpos, pos - redpos, height, ST77XX_YELLOW);
+  }
+  else
+  {
+    display.fillRect(0, heightpos, redpos, height, ST77XX_RED);
+    display.fillRect(redpos, heightpos, yellowpos - redpos, height, ST77XX_YELLOW);
+    display.fillRect(yellowpos, heightpos, pos - yellowpos, height, ST77XX_GREEN);
+  }
 }

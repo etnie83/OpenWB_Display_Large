@@ -8,5 +8,6 @@
         "ostream": "cpp",
         "sstream": "cpp",
         "bitset": "cpp"
-    }
+    },
+    "idf.portWin": "COM3"
 }
